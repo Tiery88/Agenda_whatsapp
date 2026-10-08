@@ -1,36 +1,42 @@
 from flask import Flask, request
-import os, requests
+import os, requests, json
 
 app = Flask(__name__)
-VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN", "Tiery888")
-WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN")
-PHONE_ID = os.environ.get("PHONE_NUMBER_ID")
 
 @app.route("/")
-def home(): return "Bot OK",200
+def home():
+    return "OK", 200
 
 @app.route("/webhook", methods=["GET"])
 def verify():
-    if request.args.get("hub.verify_token") == VERIFY_TOKEN:
-        return request.args.get("hub.challenge"),200
-    return "Forbidden",403
+    if request.args.get("hub.verify_token") == os.getenv("VERIFY_TOKEN"):
+        return request.args.get("hub.challenge"), 200
+    return "bad token", 403
 
 @app.route("/webhook", methods=["POST"])
-def hook():
+def webhook():
     data = request.get_json()
-    print(data)
+    print("DATA:", json.dumps(data))
     try:
-        msg = data['entry'][0]['changes'][0]['value'].get('messages')
-        if msg:
-            from_num = msg[0]['from']
-            text = msg[0]['text']['body']
-            print(f"Message de {from_num}: {text}")
-            # Répond
-            url = f"https://graph.facebook.com/v20.0/{PHONE_ID}/messages"
-            headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}"}
-            payload = {"messaging_product":"whatsapp","to":from_num,"text":{"body": f"Bien reçu : '{text}' ✅ Je le note dans l'agenda."}}
-            r = requests.post(url, headers=headers, json=payload)
-            print(r.text)
+        entry = data['entry'][0]['changes'][0]['value']
+        if 'messages' in entry:
+            msg = entry['messages'][0]
+            from_id = msg['from']
+            txt = msg['text']['body']
+            print(f"RECU de {from_id}: {txt}")
+
+            # Répondre
+            token = os.getenv("WHATSAPP_TOKEN")
+            phone_id = os.getenv("PHONE_NUMBER_ID")
+            url = f"https://graph.facebook.com/v20.0/{phone_id}/messages"
+            payload = {
+                "messaging_product": "whatsapp",
+                "to": from_id,
+                "text": {"body": f"Reçu ✅ : {txt}"}
+            }
+            headers = {"Authorization": f"Bearer {token}", "Content-Type":"application/json"}
+            r = requests.post(url, json=payload, headers=headers)
+            print("ENVOI:", r.text)
     except Exception as e:
-        print("Erreur:",e)
-    return "OK",200
+        print("Erreur:", e)
+    return "OK", 200
