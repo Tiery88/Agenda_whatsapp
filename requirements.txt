@@ -1,3 +1,4 @@
-ballon
-exige
-analyseur de date
+flask
+requests
+python-dotenv
+dateparser
