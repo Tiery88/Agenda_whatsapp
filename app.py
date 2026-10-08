@@ -1,30 +1,31 @@
 from flask import Flask, request
 import os
+print("Démarrage serveur...")
 
 app = Flask(__name__)
-
 VERIFY_TOKEN = os.environ.get("VERIFY_TOKEN", "Tiery888")
 
-@app.route("/", methods=["GET"])
+@app.route("/")
 def home():
-    return "OK - Agenda WhatsApp est en ligne", 200
+    return "Serveur Agenda OK", 200
 
 @app.route("/webhook", methods=["GET"])
-def verify():
+def verify_webhook():
+    mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
-    print(f"Verification demandée, token reçu: {token}")
-    if token == VERIFY_TOKEN:
-        print("Token OK !")
+    print(f"Facebook demande verif -> token recu: {token}")
+    if mode == "subscribe" and token == VERIFY_TOKEN:
+        print("VERIFICATION OK")
         return challenge, 200
     else:
-        print(f"Token REFUSE, attendu: {VERIFY_TOKEN}")
-        return "Token invalide", 403
+        print(f"VERIFICATION REFUSEE - Attendu: {VERIFY_TOKEN}")
+        return "Forbidden", 403
 
 @app.route("/webhook", methods=["POST"])
-def webhook():
-    data = request.get_json()
-    print("POST /webhook reçu:", data)
+def receive_message():
+    print("POST /webhook RECU !")
+    print(request.get_json())
     return "OK", 200
 
 if __name__ == "__main__":
